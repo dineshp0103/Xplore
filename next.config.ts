@@ -1,11 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* devIndicators: {
-    appIsrStatus: false,
-    buildActivity: false,
-    buildActivityPosition: 'bottom-right',
-  }, */
+  output: 'export',
+  images: {
+    unoptimized: true,
+  },
+  basePath: "/Xplore",
+  assetPrefix: "/Xplore/",
 };
 
 export default nextConfig;
