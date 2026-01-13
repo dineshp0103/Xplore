@@ -4,15 +4,15 @@ import SavedRoadmaps from "@/components/SavedRoadmaps";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-[family-name:var(--font-geist-sans)]">
-      <header className="bg-white border-b border-gray-100 py-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-black flex flex-col font-[family-name:var(--font-geist-sans)] transition-colors duration-200">
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 py-4 transition-colors duration-200">
         <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <span className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white text-lg">X</span>
             Xplore
           </h1>
           <div className="flex items-center gap-4">
-            <nav className="text-sm text-gray-500 hidden sm:block">
+            <nav className="text-sm text-gray-500 dark:text-gray-400 hidden sm:block">
               v1.0 (Beta)
             </nav>
             <AuthButton />
@@ -23,10 +23,10 @@ export default function Home() {
 
       <main className="flex-1">
         <div className="max-w-4xl mx-auto px-6 py-12 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
-            Build Your <span className="text-blue-600">Career Path</span>
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4 tracking-tight">
+            Build Your <span className="text-blue-600 dark:text-blue-500">Career Path</span>
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-12">
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-12">
             Get a personalized, step-by-step learning roadmap for any job role.
             Powered by AI to help you achieve your professional dreams.
           </p>
@@ -38,8 +38,8 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="bg-white border-t border-gray-100 py-8 text-center text-gray-500 text-sm">
-        <p>© {new Date().getFullYear()} Xplore. Powered by Gemini.</p>
+      <footer className="bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 py-8 text-center text-gray-500 dark:text-gray-400 text-sm transition-colors duration-200">
+        <p>© {new Date().getFullYear()} <big><b>Xplore</b>,Integrated with Google Gemini.</big></p>
       </footer>
     </div>
   );

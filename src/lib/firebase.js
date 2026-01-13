@@ -21,6 +21,16 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
+import { enableIndexedDbPersistence } from "firebase/firestore";
+if (typeof window !== "undefined") {
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code == 'failed-precondition') {
+      console.log('Persistence failed: Multiple tabs open');
+    } else if (err.code == 'unimplemented') {
+      console.log('Persistence not supported');
+    }
+  });
+}
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
