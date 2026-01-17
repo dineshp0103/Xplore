@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Xplore",
   description: "Dream Job Roadmap Generator",
+  icons: {
+    icon: '/icon.png',
+  },
 };
 
 export default function RootLayout({

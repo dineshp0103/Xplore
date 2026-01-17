@@ -1,19 +1,30 @@
+import Image from "next/image";
 import RoadmapGenerator from "@/components/RoadmapGenerator";
 import AuthButton from "@/components/AuthButton";
 import SavedRoadmaps from "@/components/SavedRoadmaps";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black flex flex-col font-[family-name:var(--font-geist-sans)] transition-colors duration-200">
-      <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 py-4 transition-colors duration-200">
+    <div className="min-h-screen flex flex-col font-[family-name:var(--font-geist-sans)]">
+      <header className="glass-panel border-b-0 rounded-none border-b-white/10 py-4 sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <span className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white text-lg">X</span>
-            Xplore
+          <h1 className="text-xl font-bold flex items-center gap-3">
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-lg border border-white/10">
+              <Image
+                src="https://lh3.googleusercontent.com/d/1JBLtEZWq-uJmSg4Cwx9RKb3C_DBIoCwg=w1600"
+                alt="Xplore Logo"
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
+              Xplore
+            </span>
           </h1>
           <div className="flex items-center gap-4">
-            <nav className="text-sm text-gray-500 dark:text-gray-400 hidden sm:block">
-              v1.0 (Beta)
+            <nav className="text-sm opacity-60 hidden sm:block">
+              v2.0.1 (Beta)
             </nav>
             <AuthButton />
           </div>
@@ -23,10 +34,10 @@ export default function Home() {
 
       <main className="flex-1">
         <div className="max-w-4xl mx-auto px-6 py-12 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4 tracking-tight">
-            Build Your <span className="text-blue-600 dark:text-blue-500">Career Path</span>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
+            Build Your <span className="text-blue-400">Career Path</span>
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-12">
+          <p className="text-lg opacity-80 max-w-2xl mx-auto mb-12">
             Get a personalized, step-by-step learning roadmap for any job role.
             Powered by AI to help you achieve your professional dreams.
           </p>
@@ -38,8 +49,8 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 py-8 text-center text-gray-500 dark:text-gray-400 text-sm transition-colors duration-200">
-        <p>© {new Date().getFullYear()} <big><b>Xplore</b>,Integrated with Google Gemini.</big></p>
+      <footer className="glass-panel rounded-none border-t-white/10 border-b-0 py-8 text-center opacity-60 text-sm mt-auto">
+        <p>© {new Date().getFullYear()} <big><b>Xplore</b>, Integrated with Google Gemini.</big></p>
       </footer>
     </div>
   );
