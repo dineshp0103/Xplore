@@ -1,5 +1,5 @@
 # Xplore - AI-Powered Career Roadmap Generator
-![Xplore Logo](public/icon.png)
+![Xplore Logo](public/icon(1).svg)
 
 Xplore helps users generate personalized learning roadmaps for their dream jobs using the power of Google Gemini AI.
 
