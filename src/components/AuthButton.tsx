@@ -7,7 +7,6 @@ import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/aut
 import { LogIn, LogOut, User as UserIcon, LayoutDashboard, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ThemeToggle } from './ThemeToggle';
 
 export default function AuthButton() {
     const [user, setUser] = useState<User | null>(null);
@@ -50,7 +49,6 @@ export default function AuthButton() {
     if (user) {
         return (
             <div className="flex items-center gap-4">
-                <ThemeToggle />
                 <div className="relative">
                     <button
                         onClick={() => setIsOpen(!isOpen)}
@@ -127,7 +125,6 @@ export default function AuthButton() {
 
     return (
         <div className="flex items-center gap-4">
-            <ThemeToggle />
             <button
                 onClick={handleLogin}
                 className="glass-button flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors shadow-sm cursor-pointer"

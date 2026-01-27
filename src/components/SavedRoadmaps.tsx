@@ -227,7 +227,7 @@ export default function SavedRoadmaps() {
                                     </div>
                                 ))}
                                 {!isExpanded && roadmap.steps.length > 2 && (
-                                    <div className="text-xs text-blue-500 dark:text-blue-300 pl-3.5 pt-1 font-medium">
+                                    <div className="text-xs opacity-60 pl-3.5 pt-1 font-medium">
                                         +{roadmap.steps.length - 2} more steps...
                                     </div>
                                 )}

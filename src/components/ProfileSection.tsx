@@ -144,15 +144,15 @@ export default function ProfileSection() {
     if (!user) return <div>Please sign in to view your dashboard.</div>;
 
     return (
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden transition-colors duration-200">
-            <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Professional Profile</h2>
+        <div className="glass-panel rounded-xl overflow-hidden transition-colors duration-200">
+            <div className="p-6 border-b border-gray-100 dark:border-white/10 flex justify-between items-center">
+                <h2 className="text-xl font-bold">Professional Profile</h2>
                 <button
                     onClick={() => isEditing ? handleSave() : setIsEditing(true)}
                     disabled={saving}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isEditing
-                        ? 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'
-                        : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    className={`glass-button flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isEditing
+                        ? 'border border-white/20'
+                        : ''
                         }`}
                 >
                     {isEditing ? (
@@ -182,7 +182,7 @@ export default function ProfileSection() {
                                         type="text"
                                         value={profile.displayName}
                                         onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
-                                        className="w-full px-3 py-2 border rounded-md dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                                        className="w-full glass-input px-3 py-2 border rounded-md"
                                         placeholder="Your Name"
                                     />
                                 ) : (
@@ -200,7 +200,7 @@ export default function ProfileSection() {
                                         type="text"
                                         value={profile.country}
                                         onChange={(e) => setProfile({ ...profile, country: e.target.value })}
-                                        className="w-full px-3 py-2 border rounded-md dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                                        className="w-full glass-input px-3 py-2 border rounded-md"
                                         placeholder="Country/Region"
                                     />
                                 ) : (
@@ -225,7 +225,7 @@ export default function ProfileSection() {
                                             type="text"
                                             value={profile.phone}
                                             onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                                            className="w-full px-3 py-2 border rounded-md dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                                            className="w-full glass-input px-3 py-2 border rounded-md"
                                             placeholder="Phone Number"
                                         />
                                     ) : (
@@ -252,19 +252,19 @@ export default function ProfileSection() {
                                                 placeholder="Institution"
                                                 value={edu.institution}
                                                 onChange={(e) => updateEducation(idx, 'institution', e.target.value)}
-                                                className="px-3 py-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                                                className="glass-input px-3 py-2 border rounded"
                                             />
                                             <input
                                                 placeholder="Degree"
                                                 value={edu.degree}
                                                 onChange={(e) => updateEducation(idx, 'degree', e.target.value)}
-                                                className="px-3 py-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                                                className="glass-input px-3 py-2 border rounded"
                                             />
                                             <input
                                                 placeholder="Year"
                                                 value={edu.year}
                                                 onChange={(e) => updateEducation(idx, 'year', e.target.value)}
-                                                className="px-3 py-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                                                className="glass-input px-3 py-2 border rounded"
                                             />
                                         </>
                                     ) : (
@@ -306,19 +306,19 @@ export default function ProfileSection() {
                                                 placeholder="Company"
                                                 value={work.company}
                                                 onChange={(e) => updateWorkplace(idx, 'company', e.target.value)}
-                                                className="px-3 py-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                                                className="glass-input px-3 py-2 border rounded"
                                             />
                                             <input
                                                 placeholder="Role"
                                                 value={work.role}
                                                 onChange={(e) => updateWorkplace(idx, 'role', e.target.value)}
-                                                className="px-3 py-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                                                className="glass-input px-3 py-2 border rounded"
                                             />
                                             <input
                                                 placeholder="Duration"
                                                 value={work.duration}
                                                 onChange={(e) => updateWorkplace(idx, 'duration', e.target.value)}
-                                                className="px-3 py-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                                                className="glass-input px-3 py-2 border rounded"
                                             />
                                         </>
                                     ) : (

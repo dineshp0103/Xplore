@@ -17,12 +17,14 @@ interface RoadmapStep {
 
 interface ValidationResponse {
     isValidRole: boolean;
+    validationError?: string; // Reason for invalidity
     roadmap?: RoadmapStep[];
 }
 
 export default function RoadmapGenerator() {
     const [jobRole, setJobRole] = useState('');
     const [company, setCompany] = useState('');
+    const [hoursPerDay, setHoursPerDay] = useState<number>(2);
     const [skillLevel, setSkillLevel] = useState('Beginner');
     const [loading, setLoading] = useState(false);
     const [roadmap, setRoadmap] = useState<RoadmapStep[] | null>(null);
@@ -113,28 +115,36 @@ export default function RoadmapGenerator() {
                 Role: "${jobRole}"
                 Level: "${skillLevel}"
                 ${company ? `Target Company/Workplace: "${company}"` : ''}
+                Availability: ${hoursPerDay} hours/day
 
                 Task:
-                1. Validate if "${jobRole}" is a real/valid job role.
-                2. If VALID, create a detailed learning roadmap.
-                3. If INVALID, return isValidRole: false.
+                1. VALIDATION: Check if the parameters are relevant and consistent. 
+                   - STRICTLY Check if "${jobRole}" is a real/valid job role.
+                   - If a Company is provided ("${company}"), check if it is a valid target for this role. 
+                   - CRITICAL: If the user enters a College/University name as the Company (e.g., "IIT Bombay" as company for "Software Engineer"), mark it as INVALID. Students often mistake "Company" for "College".
+                   
+                2. If INVALID, return "isValidRole": false and a "validationError" message explaining why (e.g., "It looks like you entered a college name in the Company field. Please enter a target company or leave it blank.").
+
+                3. If VALID, create a detailed learning roadmap.
+                   - Calculate realistic node durations based on ${hoursPerDay} hours/day.
 
                 Output Format (JSON ONLY):
                 {
                     "isValidRole": boolean,
+                    "validationError": "string (optional, only if invalid)",
                     "roadmap": [
                         {
                             "title": "Milestone Title",
-                            "duration": "Estimated Duration",
+                            "duration": "Estimated Duration (e.g., '2 weeks' considering ${hoursPerDay}h/day)",
                             "description": "Brief summary",
-                            "detailedExplanation": "Detailed explanation of what to learn in this phase, including tools and concepts."
+                            "detailedExplanation": "Detailed explanation including tools and concepts."
                         }
                     ]
                 }
                 
                 Requirements:
                 - 4-6 steps.
-                - If Company is provided, tailor the roadmap to that company's stack/culture if known.
+                - If Company is known, tailor content to their stack.
             `;
 
             let result;
@@ -179,7 +189,7 @@ export default function RoadmapGenerator() {
                 const data: ValidationResponse = JSON.parse(cleanText);
 
                 if (!data.isValidRole) {
-                    setValidationError("Invalid job role. Please enter a recognized professional role.");
+                    setValidationError(data.validationError || "Invalid job role or parameters. Please check your inputs.");
                 } else if (data.roadmap) {
                     setRoadmap(data.roadmap);
                 } else {
@@ -324,7 +334,25 @@ export default function RoadmapGenerator() {
                             </div>
                         </div>
 
-                        <div className="space-y-2 md:col-span-2">
+                        <div className="space-y-2">
+                            <label htmlFor="hours" className="text-sm font-medium opacity-80 block">
+                                Availability (Hours/Day)
+                            </label>
+                            <div className="relative">
+                                <input
+                                    id="hours"
+                                    type="number"
+                                    min="1"
+                                    max="24"
+                                    value={hoursPerDay}
+                                    onChange={(e) => setHoursPerDay(parseInt(e.target.value) || 1)}
+                                    className="w-full glass-input px-4 py-3 rounded-lg transition-all"
+                                />
+                                <Clock className="absolute right-4 top-3.5 w-5 h-5 opacity-50 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
                             <label htmlFor="level" className="text-sm font-medium opacity-80 block">
                                 Current Skill Level
                             </label>
@@ -335,9 +363,9 @@ export default function RoadmapGenerator() {
                                     onChange={(e) => setSkillLevel(e.target.value)}
                                     className="w-full glass-input px-4 py-3 rounded-lg appearance-none bg-transparent"
                                 >
-                                    <option value="Beginner" className="bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900">Beginner</option>
-                                    <option value="Intermediate" className="bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900">Intermediate</option>
-                                    <option value="Advanced" className="bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900">Advanced</option>
+                                    <option value="Beginner" className="text-black dark:text-white bg-white dark:bg-black">Beginner</option>
+                                    <option value="Intermediate" className="text-black dark:text-white bg-white dark:bg-black">Intermediate</option>
+                                    <option value="Advanced" className="text-black dark:text-white bg-white dark:bg-black">Advanced</option>
                                 </select>
                                 <Star className="absolute right-4 top-3.5 w-5 h-5 opacity-50 pointer-events-none" />
                             </div>
@@ -391,7 +419,7 @@ export default function RoadmapGenerator() {
                             <button
                                 onClick={handleSave}
                                 disabled={saving || saved}
-                                className={`glass-button flex items-center gap-2 px-6 py-2 text-sm font-bold rounded-lg transition-all ${saved ? 'bg-green-500/20 text-green-600 dark:text-green-300 border-green-500/30' : ''
+                                className={`glass-button flex items-center gap-2 px-6 py-2 text-sm font-bold rounded-lg transition-all ${saved ? 'border-green-500/50 text-green-600 dark:text-green-400' : ''
                                     }`}
                             >
                                 {saved ? (
@@ -428,7 +456,7 @@ export default function RoadmapGenerator() {
                                             {step.title}
                                         </h4>
                                         <div className="flex items-center gap-3">
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
+                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-blue-500/30 text-blue-600 dark:text-blue-300">
                                                 {step.duration}
                                             </span>
                                             {expandedStep === index ?
