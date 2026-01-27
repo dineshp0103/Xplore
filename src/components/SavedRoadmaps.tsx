@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { db, auth } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy, limit, startAfter, QueryDocumentSnapshot, getDocsFromCache, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
+import { User } from '@supabase/supabase-js';
 import { Map, Calendar, Loader2, ChevronDown, Building2, Maximize2, Trash2 } from 'lucide-react';
 import RoadmapModal from './RoadmapModal';
 
@@ -16,96 +15,105 @@ interface RoadmapStep {
 
 interface SavedRoadmap {
     id: string;
-    jobRole: string;
-    skillLevel: string;
+    job_role: string;
+    skill_level: string;
     company?: string;
     steps: RoadmapStep[];
-    createdAt: any;
+    created_at: string;
 }
 
 export default function SavedRoadmaps() {
     const [roadmaps, setRoadmaps] = useState<SavedRoadmap[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-    const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
+    // Pagination in Supabase is offset-based usually, or we can use range
+    const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [user, setUser] = useState<User | null>(null);
     const [selectedRoadmap, setSelectedRoadmap] = useState<SavedRoadmap | null>(null);
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-    useEffect(() => {
-        let unsubscribeSnapshot: (() => void) | null = null;
+    const fetchRoadmaps = useCallback(async (userId: string) => {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('roadmaps')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .range(0, 19);
 
-        const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
-            setUser(u);
-            if (!u) {
-                setRoadmaps([]);
-                setLoading(false);
-                if (unsubscribeSnapshot) unsubscribeSnapshot();
+        if (error) {
+            console.error('Error fetching roadmaps:', error);
+            if (error.code === 'PGRST205') {
+                alert("Setup Required: The 'roadmaps' table is missing in Supabase.\nPlease run the SQL script provided in the chat to create the database tables.");
             } else {
-                const q = query(
-                    collection(db, 'roadmaps'),
-                    where("userId", "==", u.uid),
-                    orderBy("createdAt", "desc"),
-                    limit(20)
-                );
-
-                unsubscribeSnapshot = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
-                    const data = snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    })) as SavedRoadmap[];
-
-                    setRoadmaps(data);
-                    setLoading(false);
-
-                    if (snapshot.docs.length > 0) {
-                        const lastVisible = snapshot.docs[snapshot.docs.length - 1];
-                        setLastDoc(lastVisible);
-                        setHasMore(snapshot.docs.length === 20);
-                    } else {
-                        setHasMore(false);
-                    }
-                });
+                alert(`Error fetching roadmaps: ${error.message} (Code: ${error.code})`);
             }
-        });
-
-        return () => {
-            unsubscribeAuth();
-            if (unsubscribeSnapshot) unsubscribeSnapshot();
-        };
+        } else {
+            setRoadmaps(data as SavedRoadmap[]);
+            setHasMore(data.length === 20);
+            setPage(1);
+        }
+        setLoading(false);
     }, []);
 
+    useEffect(() => {
+        let authSubscription: any;
+
+        const setupAuth = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setUser(session?.user ?? null);
+            if (session?.user) {
+                fetchRoadmaps(session.user.id);
+            } else {
+                setRoadmaps([]);
+                setLoading(false);
+            }
+
+            const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+                setUser(session?.user ?? null);
+                if (session?.user) {
+                    // Optional: refetch or just let the session storage handle it
+                    if (!roadmaps.length) fetchRoadmaps(session.user.id);
+                } else {
+                    setRoadmaps([]);
+                    setLoading(false);
+                }
+            });
+            authSubscription = data.subscription;
+        };
+
+        setupAuth();
+
+        return () => {
+            if (authSubscription) authSubscription.unsubscribe();
+        };
+    }, [fetchRoadmaps, roadmaps.length]);
+
     const handleLoadMore = async () => {
-        if (!user || loadingMore || !hasMore || !lastDoc) return;
+        if (!user || loadingMore || !hasMore) return;
 
         setLoadingMore(true);
-        try {
-            const q = query(
-                collection(db, 'roadmaps'),
-                where("userId", "==", user.uid),
-                orderBy("createdAt", "desc"),
-                startAfter(lastDoc),
-                limit(10)
-            );
+        const from = page * 20;
+        const to = from + 19;
 
-            const snapshot = await getDocs(q);
-            const newDocs = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })) as SavedRoadmap[];
+        const { data, error } = await supabase
+            .from('roadmaps')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .range(from, to);
 
-            if (newDocs.length > 0) {
-                setRoadmaps(prev => [...prev, ...newDocs]);
-                setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
+        if (error) {
+            console.error('Error fetching more roadmaps:', error);
+        } else {
+            if (data.length > 0) {
+                setRoadmaps(prev => [...prev, ...data as SavedRoadmap[]]);
+                setPage(prev => prev + 1);
             }
-            setHasMore(snapshot.docs.length === 10);
-
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoadingMore(false);
+            setHasMore(data.length === 20);
         }
+        setLoadingMore(false);
     };
 
     const handleDelete = async (roadmapId: string, e: React.MouseEvent) => {
@@ -113,7 +121,8 @@ export default function SavedRoadmaps() {
         if (!confirm("Are you sure you want to delete this roadmap? This action cannot be undone.")) return;
 
         try {
-            await deleteDoc(doc(db, "roadmaps", roadmapId));
+            await supabase.from('roadmaps').delete().eq('id', roadmapId);
+            setRoadmaps(prev => prev.filter(r => r.id !== roadmapId));
         } catch (error) {
             console.error("Error deleting roadmap:", error);
             alert("Failed to delete roadmap.");
@@ -152,10 +161,10 @@ export default function SavedRoadmaps() {
             <RoadmapModal
                 isOpen={!!selectedRoadmap}
                 onClose={() => setSelectedRoadmap(null)}
-                title={selectedRoadmap?.jobRole || ''}
+                title={selectedRoadmap?.job_role || ''}
                 company={selectedRoadmap?.company}
                 steps={selectedRoadmap?.steps || []}
-                createdAt={selectedRoadmap?.createdAt}
+                createdAt={selectedRoadmap?.created_at}
             />
 
             <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -174,11 +183,11 @@ export default function SavedRoadmaps() {
                             <div className="flex items-start justify-between mb-4">
                                 <div>
                                     <h3 className="font-bold text-lg group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
-                                        {roadmap.jobRole}
+                                        {roadmap.job_role}
                                     </h3>
                                     <div className="flex flex-wrap gap-2 mt-2">
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-black/5 dark:bg-white/10 opacity-80 border border-black/5 dark:border-white/10">
-                                            {roadmap.skillLevel}
+                                            {roadmap.skill_level}
                                         </span>
                                         {roadmap.company && (
                                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-500/30">
@@ -236,7 +245,7 @@ export default function SavedRoadmaps() {
                             <div className="flex items-center justify-between text-xs opacity-50 border-t border-gray-200 dark:border-white/10 pt-4 mt-auto">
                                 <div className="flex items-center gap-1">
                                     <Calendar className="w-3.5 h-3.5" />
-                                    Created {roadmap.createdAt?.toDate ? roadmap.createdAt.toDate().toLocaleDateString() : 'Just now'}
+                                    Created {roadmap.created_at ? new Date(roadmap.created_at).toLocaleDateString() : 'Just now'}
                                 </div>
                                 <span className="text-blue-500 dark:text-blue-400 font-bold group-hover:underline">
                                     {isExpanded ? 'Show Less' : 'Click to Toggle'}

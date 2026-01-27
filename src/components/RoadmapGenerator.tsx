@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Briefcase, Star, Loader2, Sparkles, Save, Check, Building2, ChevronDown, ChevronUp, AlertCircle, X, Clock, Maximize2, RefreshCw } from 'lucide-react';
 import { model, genAI } from '@/lib/gemini';
-import { db, auth } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { supabase } from '@/lib/supabase';
+import { User } from '@supabase/supabase-js';
 import RoadmapModal from './RoadmapModal';
 
 interface RoadmapStep {
@@ -21,7 +20,11 @@ interface ValidationResponse {
     roadmap?: RoadmapStep[];
 }
 
-export default function RoadmapGenerator() {
+interface RoadmapGeneratorProps {
+    onSaved?: () => void;
+}
+
+export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
     const [jobRole, setJobRole] = useState('');
     const [company, setCompany] = useState('');
     const [hoursPerDay, setHoursPerDay] = useState<number>(2);
@@ -40,8 +43,14 @@ export default function RoadmapGenerator() {
     const [timeLeft, setTimeLeft] = useState<string | null>(null);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
-        return () => unsubscribe();
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user ?? null);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+        });
+        return () => subscription.unsubscribe();
     }, []);
 
     useEffect(() => {
@@ -73,9 +82,16 @@ export default function RoadmapGenerator() {
     }, [quotaResetTime]);
 
     const handleSignIn = async () => {
-        const provider = new GoogleAuthProvider();
         try {
-            await signInWithPopup(auth, provider);
+            await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                    }
+                },
+            });
         } catch (error) {
             console.error("Error signing in", error);
         }
@@ -224,18 +240,18 @@ export default function RoadmapGenerator() {
         if (!roadmap) return;
         setSaving(true);
         try {
-            await addDoc(collection(db, 'roadmaps'), {
-                userId: user.uid,
-                jobRole,
+            await supabase.from('roadmaps').insert({
+                user_id: user.id,
+                job_role: jobRole,
                 company: company || null,
-                skillLevel,
-                steps: roadmap,
-                createdAt: serverTimestamp()
+                skill_level: skillLevel,
+                steps: roadmap
             });
             setSaved(true);
-        } catch (error) {
+            if (onSaved) onSaved();
+        } catch (error: any) {
             console.error("Error saving roadmap:", error);
-            alert("Failed to save roadmap.");
+            alert(`Failed to save roadmap: ${error.message || error.details || "Unknown error"}`);
         } finally {
             setSaving(false);
         }

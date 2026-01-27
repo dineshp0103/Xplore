@@ -1,9 +1,14 @@
+'use client';
+
+import { useState } from "react";
 import Image from "next/image";
 import RoadmapGenerator from "@/components/RoadmapGenerator";
 import AuthButton from "@/components/AuthButton";
 import SavedRoadmaps from "@/components/SavedRoadmaps";
 
 export default function Home() {
+  const [refreshKey, setRefreshKey] = useState(0);
+
   return (
     <div className="min-h-screen flex flex-col font-[family-name:var(--font-geist-sans)]">
       <header className="glass-panel border-b-0 rounded-none border-b-white/10 py-4 sticky top-0 z-50">
@@ -43,8 +48,8 @@ export default function Home() {
           </p>
 
           <div className="space-y-16">
-            <RoadmapGenerator />
-            <SavedRoadmaps />
+            <RoadmapGenerator onSaved={() => setRefreshKey(k => k + 1)} />
+            <SavedRoadmaps key={refreshKey} />
           </div>
         </div>
       </main>

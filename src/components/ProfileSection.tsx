@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db, auth } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { supabase } from '@/lib/supabase';
+import { User } from '@supabase/supabase-js';
+import Image from 'next/image';
 import { User as UserIcon, MapPin, Phone, Mail, Building, GraduationCap, Pencil, Save, X } from 'lucide-react';
 
 interface Education {
@@ -41,44 +41,45 @@ export default function ProfileSection() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (u) => {
-            setUser(u);
-            if (u) {
-                await fetchProfile(u.uid, u);
+        const getProfile = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setUser(session?.user ?? null);
+            if (session?.user) {
+                await fetchProfile(session.user.id, session.user);
             } else {
                 setLoading(false);
             }
-        });
-        return () => unsubscribe();
+        };
+        getProfile();
     }, []);
 
     const fetchProfile = async (uid: string, authUser: User) => {
         setLoading(true);
-        const docRef = doc(db, 'users', uid);
 
-        // Real-time listener for instant updates and offline support
-        const unsubscribe = onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setProfile(docSnap.data() as UserProfile);
-            } else {
-                // Initialize with auth data if no profile exists
-                setProfile(prev => ({
-                    ...prev,
-                    displayName: authUser.displayName || '',
-                    email: authUser.email || ''
-                }));
-            }
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching profile:", error);
-            setLoading(false);
-        });
+        const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', uid)
+            .single();
 
-        // We return unsubscribe if we wanted to clean up, but here we can rely on 
-        // the component unmounting logic if we stored it. 
-        // However, since this is called inside onAuthStateChanged, we should handle cleanup ideally.
-        // For simplicity in this functional component, we'll let it be active while the component is mounted.
-        return unsubscribe;
+        if (data) {
+            setProfile({
+                displayName: data.display_name || '',
+                country: data.country || '',
+                email: authUser.email || '',
+                phone: data.phone || '',
+                education: data.education || [],
+                workplace: data.workplace || []
+            });
+        } else {
+            // Initialize with auth data
+            setProfile(prev => ({
+                ...prev,
+                displayName: authUser.user_metadata?.full_name || '',
+                email: authUser.email || ''
+            }));
+        }
+        setLoading(false);
     };
 
     const [saving, setSaving] = useState(false);
@@ -91,14 +92,20 @@ export default function ProfileSection() {
         setSaving(true);
 
         try {
-            await setDoc(doc(db, 'users', user.uid), profile, { merge: true });
+            const { error } = await supabase.from('users').upsert({
+                id: user.id,
+                display_name: profile.displayName,
+                country: profile.country,
+                phone: profile.phone,
+                education: profile.education,
+                workplace: profile.workplace,
+                updated_at: new Date().toISOString(),
+            });
+
+            if (error) throw error;
         } catch (error: any) {
             console.error("Error saving profile:", error);
-            if (error.code === 'unavailable') {
-                // Offline persistence handles this queue
-            } else {
-                alert("Failed to save changes specific to backend. Local changes kept.");
-            }
+            alert("Failed to save changes.");
         } finally {
             setSaving(false);
         }
@@ -168,8 +175,16 @@ export default function ProfileSection() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                         <div className="flex items-center gap-4">
-                            {user.photoURL ? (
-                                <img src={user.photoURL} alt="Profile" className="w-16 h-16 rounded-full border-2 border-gray-100 dark:border-gray-700" />
+                            {user.user_metadata?.avatar_url ? (
+                                <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-gray-100 dark:border-gray-700">
+                                    <Image
+                                        src={user.user_metadata.avatar_url}
+                                        alt="Profile"
+                                        fill
+                                        className="object-cover"
+                                        unoptimized
+                                    />
+                                </div>
                             ) : (
                                 <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                                     <UserIcon className="w-8 h-8 text-gray-400 dark:text-gray-500" />

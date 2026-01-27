@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { auth, googleProvider } from '@/lib/firebase';
-import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-
+import { supabase } from '@/lib/supabase';
+import { User } from '@supabase/supabase-js';
 import { LogIn, LogOut, User as UserIcon, LayoutDashboard, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -12,33 +11,43 @@ export default function AuthButton() {
     const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
+        // Get initial session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user ?? null);
         });
-        return () => unsubscribe();
+
+        // Listen for auth changes
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
     const handleLogin = async () => {
         try {
-            googleProvider.setCustomParameters({
-                prompt: 'select_account'
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                    },
+                    redirectTo: `${window.location.origin}/dashboard`
+                },
             });
-            await signInWithPopup(auth, googleProvider);
+            if (error) throw error;
         } catch (error: any) {
             console.error("Error signing in", error);
-            if (error.code === 'auth/operation-not-allowed') {
-                alert("Configuration Error: Google Sign-In is not enabled. Please enable it in the Firebase Console under Authentication > Sign-in method.");
-            } else if (error.code === 'auth/popup-closed-by-user') {
-                // User closed popup, no need to alert
-            } else {
-                alert("Failed to sign in. See console for details.");
-            }
+            alert("Failed to sign in. See console for details.");
         }
     };
 
     const handleLogout = async () => {
         try {
-            await signOut(auth);
+            await supabase.auth.signOut();
         } catch (error) {
             console.error("Error signing out", error);
         }
@@ -53,13 +62,13 @@ export default function AuthButton() {
                     <button
                         onClick={() => setIsOpen(!isOpen)}
                         className="flex items-center gap-2 group cursor-pointer focus:outline-none"
-                        title={`Name: ${user.displayName || 'User'}`}
+                        title={`Name: ${user.user_metadata?.full_name || 'User'}`}
                     >
-                        {user.photoURL ? (
+                        {user.user_metadata?.avatar_url ? (
                             <div className="relative w-9 h-9 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 ring-2 ring-transparent group-hover:ring-blue-100 dark:group-hover:ring-blue-900 transition-all">
                                 <Image
-                                    src={user.photoURL}
-                                    alt={user.displayName || "User"}
+                                    src={user.user_metadata.avatar_url}
+                                    alt={user.user_metadata?.full_name || "User"}
                                     fill
                                     className="object-cover"
                                 />
@@ -74,7 +83,7 @@ export default function AuthButton() {
                     {isOpen && (
                         <div className="glass-panel absolute right-0 mt-2 w-56 rounded-xl shadow-lg border border-white/10 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
                             <div className="px-4 py-2 border-b border-white/10 mb-1">
-                                <p className="text-sm font-semibold truncate">{user.displayName || 'User'}</p>
+                                <p className="text-sm font-semibold truncate">{user.user_metadata?.full_name || 'User'}</p>
                                 <p className="text-xs opacity-60 truncate">{user.email}</p>
                             </div>
 

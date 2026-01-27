@@ -16,7 +16,7 @@ interface RoadmapModalProps {
     title: string;
     company?: string | null;
     steps: RoadmapStep[];
-    createdAt?: any;
+    createdAt?: string;
 }
 
 export default function RoadmapModal({ isOpen, onClose, title, company, steps, createdAt }: RoadmapModalProps) {
@@ -61,7 +61,7 @@ export default function RoadmapModal({ isOpen, onClose, title, company, steps, c
                         {createdAt && (
                             <div className="flex items-center gap-2 mt-1 text-xs opacity-60">
                                 <Calendar className="w-3 h-3" />
-                                Created {new Date(createdAt.seconds * 1000).toLocaleDateString()}
+                                Created {new Date(createdAt).toLocaleDateString()}
                             </div>
                         )}
                     </div>
