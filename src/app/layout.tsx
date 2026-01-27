@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: "Xplore",
   description: "Dream Job Roadmap Generator",
   icons: {
-    icon: '/icon.png',
+    icon: 'https://uavonoavvcyzlcdbrifu.supabase.co/storage/v1/object/public/assets/icon.png',
   },
 };
 

@@ -16,7 +16,7 @@ export default function Home() {
           <h1 className="text-xl font-bold flex items-center gap-3">
             <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-lg border border-white/10">
               <Image
-                src="/icon.png"
+                src="https://uavonoavvcyzlcdbrifu.supabase.co/storage/v1/object/public/assets/icon.png"
                 alt="Xplore Logo"
                 fill
                 className="object-cover"

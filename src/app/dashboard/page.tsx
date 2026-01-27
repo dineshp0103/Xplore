@@ -43,7 +43,7 @@ export default function Dashboard() {
                         <h1 className="text-xl font-bold text-white flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
                             <div className="relative w-8 h-8 rounded-lg overflow-hidden">
                                 <Image
-                                    src="/icon.png"
+                                    src="https://uavonoavvcyzlcdbrifu.supabase.co/storage/v1/object/public/assets/icon.png"
                                     alt="Xplore Logo"
                                     fill
                                     className="object-cover"
