@@ -35,11 +35,12 @@ export default function AuthButton() {
                         access_type: 'offline',
                         prompt: 'consent',
                     },
-                    redirectTo: `${window.location.origin}/dashboard`
+                    redirectTo: `${window.location.origin}${window.location.pathname.startsWith('/Xplore') ? '/Xplore' : ''}/dashboard`
                 },
             });
 
-            console.log('Attempting sign in with redirect to:', `${window.location.origin}/dashboard`);
+            const redirectUrl = `${window.location.origin}${window.location.pathname.startsWith('/Xplore') ? '/Xplore' : ''}/dashboard`;
+            console.log('Attempting sign in with redirect to:', redirectUrl);
 
             if (error) {
                 console.error("Supabase Auth Error:", error);
