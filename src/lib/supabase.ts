@@ -17,4 +17,11 @@ const isValidUrl = (url: string) => {
 const url = isValidUrl(supabaseUrl) ? supabaseUrl : 'https://place-holder.supabase.co';
 const key = supabaseAnonKey || 'placeholder-key';
 
+if (!isValidUrl(supabaseUrl)) {
+    console.error('Supabase URL is missing or invalid. Check your environment variables.');
+}
+if (!supabaseAnonKey) {
+    console.error('Supabase Anon Key is missing. Check your environment variables.');
+}
+
 export const supabase = createClient(url, key);

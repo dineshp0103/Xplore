@@ -38,7 +38,13 @@ export default function AuthButton() {
                     redirectTo: `${window.location.origin}/dashboard`
                 },
             });
-            if (error) throw error;
+
+            console.log('Attempting sign in with redirect to:', `${window.location.origin}/dashboard`);
+
+            if (error) {
+                console.error("Supabase Auth Error:", error);
+                throw error;
+            }
         } catch (error: any) {
             console.error("Error signing in", error);
             alert("Failed to sign in. See console for details.");
