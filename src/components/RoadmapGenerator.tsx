@@ -107,7 +107,7 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
         setValidationError(null);
 
         try {
-            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+            const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000').replace(/\/$/, '');
             const response = await fetch(`${backendUrl}/api/generate-roadmap`, {
                 method: 'POST',
                 headers: {
