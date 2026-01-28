@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Briefcase, Star, Loader2, Sparkles, Save, Check, Building2, ChevronDown, ChevronUp, AlertCircle, X, Clock, Maximize2, RefreshCw } from 'lucide-react';
-import { model, genAI } from '@/lib/gemini';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import RoadmapModal from './RoadmapModal';
@@ -97,28 +96,9 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
         }
     };
 
-    const extractRetryDelay = (error: any): number => {
-        // Log the error for debugging
-        console.log("Extracting retry delay from:", error);
-
-        // 1. Check for standard Google Error structure with retryDelay
-        // Example: error.response?.data?.error?.details?.[0]?.retryDelay (depends on library version)
-
-        // 2. Parse from message string "Please retry in X s."
-        // Example: "Please retry in 4.258956589s." or "Please retry in 4s."
-        const match = error.message?.match(/Please retry in ([\d\.]+)s/);
-        if (match && match[1]) {
-            return Math.ceil(parseFloat(match[1]) * 1000);
-        }
-
-        // 3. Fallback default (60s)
-        return 60000;
-    };
-
     const handleGenerate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!jobRole) return;
-        if (quotaResetTime) return; // Prevent requests if waiting
 
         setLoading(true);
         setRoadmap(null);
@@ -127,102 +107,38 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
         setValidationError(null);
 
         try {
-            const basePrompt = `
-                Role: "${jobRole}"
-                Level: "${skillLevel}"
-                ${company ? `Target Company/Workplace: "${company}"` : ''}
-                Availability: ${hoursPerDay} hours/day
+            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+            const response = await fetch(`${backendUrl}/api/generate-roadmap`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    jobRole,
+                    company,
+                    hoursPerDay,
+                    skillLevel
+                }),
+            });
 
-                Task:
-                1. VALIDATION: Check if the parameters are relevant and consistent. 
-                   - STRICTLY Check if "${jobRole}" is a real/valid job role.
-                   - If a Company is provided ("${company}"), check if it is a valid target for this role. 
-                   - CRITICAL: If the user enters a College/University name as the Company (e.g., "IIT Bombay" as company for "Software Engineer"), mark it as INVALID. Students often mistake "Company" for "College".
-                   
-                2. If INVALID, return "isValidRole": false and a "validationError" message explaining why (e.g., "It looks like you entered a college name in the Company field. Please enter a target company or leave it blank.").
-
-                3. If VALID, create a detailed learning roadmap.
-                   - Calculate realistic node durations based on ${hoursPerDay} hours/day.
-
-                Output Format (JSON ONLY):
-                {
-                    "isValidRole": boolean,
-                    "validationError": "string (optional, only if invalid)",
-                    "roadmap": [
-                        {
-                            "title": "Milestone Title",
-                            "duration": "Estimated Duration (e.g., '2 weeks' considering ${hoursPerDay}h/day)",
-                            "description": "Brief summary",
-                            "detailedExplanation": "Detailed explanation including tools and concepts."
-                        }
-                    ]
-                }
-                
-                Requirements:
-                - 4-6 steps.
-                - If Company is known, tailor content to their stack.
-            `;
-
-            let result;
-            try {
-                // Only using Primary Model as others returned 404 for this key
-                result = await model.generateContent(basePrompt);
-            } catch (error: any) {
-                // Check for Quota Exceeded (429) source or message
-                const isQuota = error.message?.includes("429") || error.message?.includes("Quota exceeded");
-
-                if (isQuota) {
-                    console.warn("Primary model quota exceeded.", error.message);
-
-                    // Logic Difference: Daily Quota vs Short-Term Rate Limit
-                    const isDaily = error.message?.toLowerCase().includes("daily") || error.message?.toLowerCase().includes("per day");
-
-                    if (isDaily) {
-                        // Custom Logic: Reset at 3:30 PM on the next day
-                        const now = new Date();
-                        const target = new Date(now);
-                        target.setDate(now.getDate() + 1); // Next day
-                        target.setHours(15, 30, 0, 0); // 3:30 PM
-
-                        setQuotaResetTime(target.getTime());
-                        throw new Error(`Daily quota exceeded. Reset at ${target.toLocaleString()}`);
-                    } else {
-                        // Short-term rate limit (e.g. 15 RPM)
-                        const delay = extractRetryDelay(error);
-                        setQuotaResetTime(Date.now() + delay);
-                        throw new Error(`Rate limit hit. Cooling down for ${Math.ceil(delay / 1000)}s`);
-                    }
-                }
-                // If it's not a quota error (e.g. 500, network), strictly re-throw
-                throw error;
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to generate roadmap');
             }
 
-            const response = await result.response;
-            const text = response.text();
-            const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            const data: ValidationResponse = await response.json();
 
-            try {
-                const data: ValidationResponse = JSON.parse(cleanText);
-
-                if (!data.isValidRole) {
-                    setValidationError(data.validationError || "Invalid job role or parameters. Please check your inputs.");
-                } else if (data.roadmap) {
-                    setRoadmap(data.roadmap);
-                } else {
-                    setError("Failed to parse roadmap data.");
-                }
-            } catch (parseError) {
-                console.error("JSON Parse Error:", parseError);
-                setError("Failed to parse the AI response.");
+            if (!data.isValidRole) {
+                setValidationError(data.validationError || "Invalid job role or parameters. Please check your inputs.");
+            } else if (data.roadmap) {
+                setRoadmap(data.roadmap);
+            } else {
+                setError("Failed to parse roadmap data.");
             }
 
         } catch (error: any) {
             console.error("Error generating roadmap:", error);
-            if (error.message.includes("Quota exceeded") || error.message.includes("Rate limit")) {
-                // Error handled by popup logic
-            } else {
-                setError("Failed to generate roadmap. Please try again.");
-            }
+            setError(error.message || "Failed to generate roadmap. Please try again.");
         } finally {
             setLoading(false);
         }
