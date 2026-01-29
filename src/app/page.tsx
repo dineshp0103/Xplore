@@ -35,7 +35,7 @@ export default function Home() {
           </h1>
           <div className="flex items-center gap-4">
             <nav className="text-sm opacity-60 hidden sm:block">
-              v2.0.1 (Beta)
+              v3.0.0 (Beta)
             </nav>
             <AuthButton />
           </div>
