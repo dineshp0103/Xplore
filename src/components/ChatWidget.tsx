@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, Sparkles, Trash2, Maximize2, Minimize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChatMessage, { TypingIndicator } from './ChatMessage';
+import { useResponseCache } from '@/hooks/useResponseCache';
 
 interface Message {
     role: 'user' | 'ai';
@@ -50,8 +51,16 @@ export default function ChatWidget() {
         }
     }, [input]);
 
+    const { getFromCache, addToCache } = useResponseCache<string>(10);
+
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;
+
+        // Security: Prevent extremely long inputs (tokens/cost/DDoS)
+        if (input.length > 500) {
+            alert("Message is too long. Please keep it under 500 characters.");
+            return;
+        }
 
         const userMessage: Message = {
             role: 'user',
@@ -64,6 +73,22 @@ export default function ChatWidget() {
         setIsLoading(true);
 
         if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
+        const cachedResponse = getFromCache(userMessage.content);
+        if (cachedResponse) {
+            console.log(`[Cache Hit] Served response for: "${userMessage.content}"`);
+            // Simulate short delay for "thinking" feel even if cached
+            setTimeout(() => {
+                const aiMessage: Message = {
+                    role: 'ai',
+                    content: cachedResponse,
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                };
+                setMessages(prev => [...prev, aiMessage]);
+                setIsLoading(false);
+            }, 500);
+            return;
+        }
 
         try {
             // Prepare history for backend (limit to last 10 messages to save tokens)
@@ -90,6 +115,9 @@ export default function ChatWidget() {
             }
 
             const data = await response.json();
+
+            // Cache the successful response
+            addToCache(userMessage.content, data.response);
 
             const aiMessage: Message = {
                 role: 'ai',

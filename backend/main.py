@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import List, Optional
 import json
-
-import json
+import hashlib
+from supabase import create_client, Client
 
 # Load environment variables
 load_dotenv(".env.local")
@@ -22,6 +22,20 @@ if not api_key:
 genai.configure(api_key=api_key)
 # Default model for roadmap generation
 roadmap_model = genai.GenerativeModel("gemini-flash-latest")
+
+# Configure Supabase for Caching
+supabase_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+supabase_key = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+supabase: Client = None
+
+if supabase_url and supabase_key:
+    try:
+        supabase = create_client(supabase_url, supabase_key)
+        print("Supabase client initialized for caching.")
+    except Exception as e:
+        print(f"Failed to initialize Supabase: {e}")
+else:
+    print("Warning: Supabase credentials not found. Caching will be disabled.")
 
 # Chat model with system instruction
 chat_system_instruction = """
@@ -105,8 +119,34 @@ class RoadmapRequest(BaseModel):
     hoursPerDay: int
     skillLevel: str
 
+def generate_params_hash(role: str, company: Optional[str], hours: int, level: str) -> str:
+    # Normalize inputs
+    role = role.lower().strip()
+    company = company.lower().strip() if company else ""
+    hours = str(hours)
+    level = level.lower().strip()
+    
+    # Create a unique string
+    raw = f"{role}|{company}|{hours}|{level}"
+    return hashlib.md5(raw.encode()).hexdigest()
+
 @app.post("/api/generate-roadmap", response_model=ValidationResponse)
 async def generate_roadmap(request: RoadmapRequest):
+    # 1. Check Cache
+    params_hash = generate_params_hash(request.jobRole, request.company, request.hoursPerDay, request.skillLevel)
+    
+    if supabase:
+        try:
+            # Check roadmap_cache table
+            cache_response = supabase.table("roadmap_cache").select("data").eq("params_hash", params_hash).execute()
+            if cache_response.data and len(cache_response.data) > 0:
+                print("Serving roadmap from Backend Cache")
+                cached_data = cache_response.data[0]["data"]
+                return cached_data
+        except Exception as e:
+            print(f"Cache lookup failed: {e}")
+
+    # 2. Generate if not in cache
     try:
         base_prompt = f"""
         Role: "{request.jobRole}"
@@ -153,6 +193,18 @@ async def generate_roadmap(request: RoadmapRequest):
         
         try:
             data = json.loads(clean_text)
+            
+            # 3. Store in Cache (if valid and supabase is available)
+            if supabase and data.get("isValidRole"):
+                try:
+                    supabase.table("roadmap_cache").insert({
+                        "params_hash": params_hash,
+                        "data": data
+                    }).execute()
+                    print("Saved roadmap to Backend Cache")
+                except Exception as e:
+                    print(f"Failed to save to cache: {e}")
+            
             return data
         except json.JSONDecodeError:
             raise HTTPException(status_code=500, detail="Failed to parse AI response")

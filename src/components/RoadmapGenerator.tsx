@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Briefcase, Star, Loader2, Sparkles, Save, Check, Building2, ChevronDown, ChevronUp, AlertCircle, X, Clock, Maximize2, RefreshCw } from 'lucide-react';
+import { Briefcase, Star, Loader2, Sparkles, Save, Check, Building2, ChevronDown, ChevronUp, AlertCircle, X, Clock, Maximize2, RefreshCw, Layout, List } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import RoadmapModal from './RoadmapModal';
+import RoadmapGraphView from './RoadmapGraphView';
 
 interface RoadmapStep {
     title: string;
@@ -36,6 +37,8 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
     const [expandedStep, setExpandedStep] = useState<number | null>(null);
     const [validationError, setValidationError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [viewMode, setViewMode] = useState<'list' | 'graph'>('graph'); // Default to graph since it is cooler
+
 
     const [error, setError] = useState<string | null>(null);
     const [quotaResetTime, setQuotaResetTime] = useState<number | null>(null);
@@ -100,6 +103,20 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
         e.preventDefault();
         if (!jobRole) return;
 
+        // Security: Input Validation
+        if (jobRole.length > 50 || company.length > 50) {
+            setValidationError("Inputs are too long. Please keep them under 50 characters.");
+            return;
+        }
+        // Basic sanitization
+        const cleanRole = jobRole.replace(/[<>]/g, "").trim();
+        const cleanCompany = company.replace(/[<>]/g, "").trim();
+
+        if (cleanRole.length < 2) {
+            setValidationError("Job role is too short.");
+            return;
+        }
+
         setLoading(true);
         setRoadmap(null);
         setSaved(false);
@@ -114,8 +131,8 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    jobRole,
-                    company,
+                    jobRole: cleanRole,
+                    company: cleanCompany,
                     hoursPerDay,
                     skillLevel
                 }),
@@ -351,13 +368,23 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
                         </h3>
 
                         <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setIsModalOpen(true)}
-                                className="glass-button p-2 rounded-lg"
-                                title="Enlarge Roadmap"
-                            >
-                                <Maximize2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex bg-white/5 rounded-lg p-1 border border-white/10 mr-2">
+                                <button
+                                    onClick={() => setViewMode('list')}
+                                    className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-blue-500 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                                    title="List View"
+                                >
+                                    <List className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('graph')}
+                                    className={`p-1.5 rounded-md transition-all ${viewMode === 'graph' ? 'bg-blue-500 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                                    title="Graph View"
+                                >
+                                    <Layout className="w-4 h-4" />
+                                </button>
+                            </div>
+
                             <button
                                 onClick={handleSave}
                                 disabled={saving || saved}
@@ -384,44 +411,57 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
                         </div>
                     </div>
 
-                    <div className="relative border-l-2 border-blue-500/30 ml-4 space-y-8 pb-4">
-                        {roadmap.map((step, index) => (
-                            <div key={index} className="relative pl-8">
-                                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                    {viewMode === 'graph' ? (
+                        <div className="animate-in fade-in zoom-in-95 duration-500">
+                            <RoadmapGraphView
+                                steps={roadmap}
+                                onNodeClick={(step) => {
+                                    // Find index locally if needed or just use step data
+                                    alert(`Step: ${step.title}\n${step.description}`);
+                                }}
+                            />
+                            <p className="text-center text-xs opacity-50 mt-2">Click nodes for details. Switch to List View for full content.</p>
+                        </div>
+                    ) : (
+                        <div className="relative border-l-2 border-blue-500/30 ml-4 space-y-8 pb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {roadmap.map((step, index) => (
+                                <div key={index} className="relative pl-8">
+                                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
 
-                                <div
-                                    className="glass-panel rounded-xl p-6 hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer group"
-                                    onClick={() => setExpandedStep(expandedStep === index ? null : index)}
-                                >
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-                                        <h4 className="text-lg font-bold group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                            {step.title}
-                                        </h4>
-                                        <div className="flex items-center gap-3">
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-blue-500/30 text-blue-600 dark:text-blue-300">
-                                                {step.duration}
-                                            </span>
-                                            {expandedStep === index ?
-                                                <ChevronUp className="w-5 h-5 opacity-60" /> :
-                                                <ChevronDown className="w-5 h-5 opacity-60" />
-                                            }
+                                    <div
+                                        className="glass-panel rounded-xl p-6 hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer group"
+                                        onClick={() => setExpandedStep(expandedStep === index ? null : index)}
+                                    >
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+                                            <h4 className="text-lg font-bold group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                                {step.title}
+                                            </h4>
+                                            <div className="flex items-center gap-3">
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-blue-500/30 text-blue-600 dark:text-blue-300">
+                                                    {step.duration}
+                                                </span>
+                                                {expandedStep === index ?
+                                                    <ChevronUp className="w-5 h-5 opacity-60" /> :
+                                                    <ChevronDown className="w-5 h-5 opacity-60" />
+                                                }
+                                            </div>
                                         </div>
+
+                                        <p className="opacity-80 leading-relaxed mb-2">
+                                            {step.description}
+                                        </p>
+
+                                        {expandedStep === index && step.detailedExplanation && (
+                                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 text-sm opacity-80 animate-in fade-in slide-in-from-top-2">
+                                                <h5 className="text-blue-600 dark:text-blue-400 font-semibold mb-2">In-depth Guide:</h5>
+                                                <p>{step.detailedExplanation}</p>
+                                            </div>
+                                        )}
                                     </div>
-
-                                    <p className="opacity-80 leading-relaxed mb-2">
-                                        {step.description}
-                                    </p>
-
-                                    {expandedStep === index && step.detailedExplanation && (
-                                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 text-sm opacity-80 animate-in fade-in slide-in-from-top-2">
-                                            <h5 className="text-blue-600 dark:text-blue-400 font-semibold mb-2">In-depth Guide:</h5>
-                                            <p>{step.detailedExplanation}</p>
-                                        </div>
-                                    )}
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </div>
