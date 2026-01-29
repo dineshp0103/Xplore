@@ -5,15 +5,18 @@ Xplore helps users generate personalized learning roadmaps for their dream jobs 
 
 ## 🚀 Key Features
 - **Premium Glass UI**: A completely redesigned interface with modern glassmorphism aesthetics and dynamic backgrounds.
+- **Interactive Roadmap Graph**: Visualize your learning path as a node-link diagram using React Flow.
+- **Smart Caching (DSA)**: 
+    - **Client-Side**: Instant responses for repeated chat queries using LRU Cache.
+    - **Cross-User**: Identical roadmap requests are served from the backend cache instantly.
 - **Smart Input Validation**: The AI now validates job roles instantly and provides feedback.
-- **Company-Specific Roadmaps**: Generate tailored roadmaps for specific organizational stacks.
+- **Security**: Input sanitization and length limits to prevent abuse and injection.
 - **Detailed Step Explanations**: Click on any roadmap phase for deep-dive guides.
 - **Save & Manage Paths**: Save your roadmaps for later viewing.
-- **Interactive Dashboard**: Track your career planning progress.
 
 ## 🛠 Tech Stack
-- **Frontend**: Next.js 16 (App Router), TypeScript, Tailwind CSS v4
-- **Backend**: Python, FastAPI
+- **Frontend**: Next.js 16 (App Router), TypeScript, Tailwind CSS v4, **React Flow**, **Dagre**
+- **Backend**: Python, FastAPI, **Supabase Cache**
 - **AI**: Google Gemini Pro
 - **Database & Auth**: Supabase
 
@@ -25,7 +28,7 @@ Xplore helps users generate personalized learning roadmaps for their dream jobs 
 
 ### Prerequisites
 - Node.js (v18+)
-- Python (v3.9+)
+- Python (v3.9+) or `uv` package manager
 - A [Supabase](https://supabase.com/) account
 - A [Google AI Studio](https://aistudio.google.com/) API Key
 
@@ -39,14 +42,14 @@ Xplore helps users generate personalized learning roadmaps for their dream jobs 
 
 2. **Backend Setup (Python)**
    ```bash
-   # Create virtual environment
+   # Create virtual environment (if using venv)
    python -m venv .venv
-   
-   # Activate (Windows)
    .venv\Scripts\activate
    
    # Install dependencies
    pip install -r requirements.txt
+   # OR if using uv
+   uv sync
    
    # Run backend
    uvicorn backend.main:app --reload
@@ -66,12 +69,12 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 ```
-> **Note**: For production, `NEXT_PUBLIC_BACKEND_URL` should point to your deployed backend.
 
 ### Database Setup
 1. Go to your **Supabase Dashboard** -> **SQL Editor**.
-2. Run the script `supabase_schema.sql` (creates roadmaps table).
-3. Run the script `create_users_table.sql` (creates users table for dashboard).
+2. Run `supabase_schema.sql` (creates `roadmaps` table).
+3. Run `create_users_table.sql` (creates `users` table).
+4. **[NEW]** Run `create_roadmap_cache.sql` (creates `roadmap_cache` table for performance).
 
 ## 🚀 Deployment
 - **Frontend**: Deployed via GitHub Actions to **GitHub Pages**. (See `.github/workflows/nextjs.yaml`)
@@ -79,8 +82,8 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 
 ## ✅ Verification
 - **Generate**: Try generating a roadmap for "Frontend Developer".
-- **Save**: Click "Save" and verify it appears in "Saved Roadmaps".
-- **Dashboard**: Sign in and try saving your profile details.
+- **Graph View**: Click the "Graph Layout" toggle to see the visual roadmap.
+- **Chat Caching**: Ask a question, then ask it again to see the instant cache response.
 
 ---
 *Built with ❤️ using Next.js and Gemini*
