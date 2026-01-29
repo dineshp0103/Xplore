@@ -7,11 +7,38 @@ from pydantic import BaseModel
 from typing import List, Optional
 import json
 
+import json
+
 # Load environment variables
 load_dotenv(".env.local")
 
 app = FastAPI()
 
+# Configure Gemini
+api_key = os.getenv("GEMINI_API_KEY") or os.getenv("NEXT_PUBLIC_GEMINI_API_KEY")
+if not api_key:
+    print("Warning: GEMINI_API_KEY not found in environment variables.")
+
+genai.configure(api_key=api_key)
+# Default model for roadmap generation
+roadmap_model = genai.GenerativeModel("gemini-flash-latest")
+
+# Chat model with system instruction
+chat_system_instruction = """
+You are Xplore AI, a professional Career Mentor and Tech Trainer.
+Your goal is to help users understand their generated career roadmaps and explain technical concepts in depth.
+
+RULES:
+1.  **Fact-Based Only**: You must provide only verified, factual information. If you are unsure, admit it. Do not hallucinate.
+2.  **Context Aware**: The user might ask about specific steps in their roadmap. Use the provided context.
+3.  **Mentor Persona**: Be encouraging, professional, and structured. Use headings and bullet points.
+4.  **No Fluff**: Keep answers concise but comprehensive.
+5.  **Strictly Tech/Career Focused**: Do not answer questions unrelated to technology, careers, or learning.
+"""
+chat_model = genai.GenerativeModel(
+    "gemini-flash-latest",
+    system_instruction=chat_system_instruction
+)
 # Configure CORS
 origins = [
     "http://localhost:3000",
@@ -28,13 +55,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure Gemini
-api_key = os.getenv("GEMINI_API_KEY") or os.getenv("NEXT_PUBLIC_GEMINI_API_KEY")
-if not api_key:
-    print("Warning: GEMINI_API_KEY not found in environment variables.")
 
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel("gemini-flash-latest")
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    message: str
+    history: List[ChatMessage] = []
+
+@app.post("/api/chat")
+async def chat_endpoint(request: ChatRequest):
+    try:
+        # Construct chat history for Gemini
+        history = []
+        for msg in request.history:
+             # Map 'ai' role to 'model' for Gemini
+            role = "model" if msg.role == "ai" else "user"
+            history.append({"role": role, "parts": [msg.content]})
+
+        chat = chat_model.start_chat(history=history)
+        
+        response = chat.send_message(request.message)
+        return {"response": response.text}
+
+    except Exception as e:
+        print(f"Error in chat: {e}")
+        error_msg = str(e)
+        status_code = 500
+        if "429" in error_msg:
+            status_code = 429
+            error_msg = "Gemini API Quota Exceeded. Please wait a moment."
+        raise HTTPException(status_code=status_code, detail=error_msg)
 
 class RoadmapStep(BaseModel):
     title: str
@@ -94,7 +146,7 @@ async def generate_roadmap(request: RoadmapRequest):
         - If Company is known, tailor content to their stack.
         """
 
-        response = model.generate_content(base_prompt)
+        response = roadmap_model.generate_content(base_prompt)
         text = response.text
         # Clean up JSON
         clean_text = text.replace("```json", "").replace("```", "").strip()
@@ -107,7 +159,12 @@ async def generate_roadmap(request: RoadmapRequest):
 
     except Exception as e:
         print(f"Error generating roadmap: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = str(e)
+        status_code = 500
+        if "429" in error_msg:
+            status_code = 429
+            error_msg = "Gemini API Quota Exceeded. Please wait a moment."
+        raise HTTPException(status_code=status_code, detail=error_msg)
 
 @app.get("/health")
 async def health_check():

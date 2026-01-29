@@ -5,6 +5,7 @@ import Image from "next/image";
 import RoadmapGenerator from "@/components/RoadmapGenerator";
 import AuthButton from "@/components/AuthButton";
 import SavedRoadmaps from "@/components/SavedRoadmaps";
+import ChatWidget from "@/components/ChatWidget";
 
 export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -23,9 +24,14 @@ export default function Home() {
                 priority
               />
             </div>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
-              Xplore
-            </span>
+            <div className="flex flex-col">
+              <span className="text-white leading-none">
+                Xplore
+              </span>
+              <span className="text-[10px] text-blue-400 font-medium tracking-wide">
+                Go beyond the limits
+              </span>
+            </div>
           </h1>
           <div className="flex items-center gap-4">
             <nav className="text-sm opacity-60 hidden sm:block">
@@ -57,6 +63,7 @@ export default function Home() {
       <footer className="glass-panel rounded-none border-t-white/10 border-b-0 py-8 text-center opacity-60 text-sm mt-auto">
         <p>© {new Date().getFullYear()} <big><b>Xplore</b>, Integrated with Google Gemini.</big></p>
       </footer>
+      <ChatWidget />
     </div>
   );
 }

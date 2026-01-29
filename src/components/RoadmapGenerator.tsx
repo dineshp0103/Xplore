@@ -138,7 +138,17 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
 
         } catch (error: any) {
             console.error("Error generating roadmap:", error);
-            setError(error.message || "Failed to generate roadmap. Please try again.");
+            let msg = error.message || "Failed to generate roadmap. Please try again.";
+
+            // Check for quota error
+            if (msg.includes("429") || msg.includes("Quota Exceeded") || msg.includes("Server busy")) {
+                msg = "Server busy (High Traffic). Please try again in 1 minute.";
+                // Trigger cooldown timer if implemented
+                setQuotaResetTime(Date.now() + 60000); // 1 minute
+                setTimeLeft("1m 0s");
+            }
+
+            setError(msg);
         } finally {
             setLoading(false);
         }
