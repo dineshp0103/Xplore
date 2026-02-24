@@ -36,7 +36,7 @@ Xplore helps users generate personalized learning roadmaps for their dream jobs 
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/Pdinesh0103/Xplore.git
+   git clone https://github.com/dineshp0103/Xplore.git
    cd Xplore
    ```
 
