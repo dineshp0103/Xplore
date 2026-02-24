@@ -22,7 +22,7 @@ Xplore helps users generate personalized learning roadmaps for their dream jobs 
 
 ## 🌐 Live Demo
 - **Frontend**: [https://dineshp0103.github.io/Xplore](https://dineshp0103.github.io/Xplore)
-- **Backend (API)**: [Render Deployment](https://xplore-6lrd.onrender.com)
+- **Backend (API)**: [Render Deployment](https://xplore-yjkw.onrender.com)
 
 ## 🏃‍♂️ Getting Started
 
