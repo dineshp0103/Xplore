@@ -1,76 +1,37 @@
-'use client';
+import { ProgressHero } from "@/components/dashboard/ProgressHero";
+import { ActivityGraph } from "@/components/dashboard/ActivityGraph";
+import { DailyGoals } from "@/components/dashboard/DailyGoals";
+import { StatsWidgets } from "@/components/dashboard/StatsWidgets";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { ArrowLeft } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import SavedRoadmaps from '@/components/SavedRoadmaps';
-import ProfileSection from '@/components/ProfileSection';
-import AuthButton from '@/components/AuthButton';
-import DashboardSkeleton from '@/components/DashboardSkeleton';
-
-export default function Dashboard() {
-    const router = useRouter();
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const checkUser = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                router.push('/');
-            } else {
-                setLoading(false);
-            }
-        };
-        checkUser();
-    }, [router]);
-
-    if (loading) return <DashboardSkeleton />;
-
+export default function DashboardPage() {
     return (
-        <div className="min-h-screen font-[family-name:var(--font-geist-sans)]">
-            <header className="glass-panel border-b-0 rounded-none border-b-white/10 py-4 sticky top-0 z-50">
-                <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => router.push('/')}
-                            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                            title="Back to Home"
-                        >
-                            <ArrowLeft className="w-5 h-5" />
-                        </button>
-                        <h1 className="text-xl font-bold text-white flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
-                            <div className="relative w-8 h-8 rounded-lg overflow-hidden">
-                                <Image
-                                    src="https://uavonoavvcyzlcdbrifu.supabase.co/storage/v1/object/public/assets/icon.png"
-                                    alt="Xplore Logo"
-                                    fill
-                                    className="object-cover"
-                                />
-                            </div>
-                            Xplore
-                        </h1>
-                    </div>
-                    <AuthButton />
+        <div className="max-w-7xl mx-auto flex flex-col gap-8">
+            {/* Page Heading */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                <div>
+                    <h2 className="text-3xl font-bold text-white tracking-tight">Welcome back, Alex! 👋</h2>
+                    <p className="text-[#92adc9] mt-2">Let's continue your journey to becoming a Full Stack Developer.</p>
                 </div>
-            </header>
-
-            <main className="max-w-6xl mx-auto px-6 py-8">
-                <h1 className="text-3xl font-bold text-white mb-8">User Dashboard</h1>
-
-                <div className="space-y-8">
-                    {/* Profile Section */}
-                    <div className="glass-panel rounded-xl p-6">
-                        <ProfileSection />
-                    </div>
-
-                    {/* Roadmaps */}
-                    <div>
-                        <SavedRoadmaps />
-                    </div>
+                <div className="flex gap-3">
+                    <button className="px-4 py-2 rounded-lg bg-[#233648] text-white text-sm font-medium hover:bg-[#2d465e] transition">View Calendar</button>
+                    <button className="px-4 py-2 rounded-lg bg-[#137fec] text-white text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition">Resume Learning</button>
                 </div>
-            </main>
+            </div>
+
+            {/* Main Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Left Column (Main Focus) */}
+                <div className="lg:col-span-8 flex flex-col gap-6">
+                    <ProgressHero />
+                    <ActivityGraph />
+                </div>
+
+                {/* Right Column (Widgets) */}
+                <div className="lg:col-span-4 flex flex-col gap-6">
+                    <DailyGoals />
+                    <StatsWidgets />
+                </div>
+            </div>
         </div>
     );
 }

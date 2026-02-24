@@ -5,22 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { Map, Calendar, Loader2, ChevronDown, Building2, Maximize2, Trash2 } from 'lucide-react';
 import RoadmapModal from './RoadmapModal';
-
-interface RoadmapStep {
-    title: string;
-    duration: string;
-    description: string;
-    detailedExplanation?: string;
-}
-
-interface SavedRoadmap {
-    id: string;
-    job_role: string;
-    skill_level: string;
-    company?: string;
-    steps: RoadmapStep[];
-    created_at: string;
-}
+import { RoadmapStep, StepStatus, Roadmap as SavedRoadmap, NodePositions } from '@/types/roadmap';
 
 export default function SavedRoadmaps() {
     const [roadmaps, setRoadmaps] = useState<SavedRoadmap[]>([]);
@@ -138,6 +123,45 @@ export default function SavedRoadmaps() {
         }));
     };
 
+    const handleStatusChange = (roadmapId: string, stepId: string, status: StepStatus) => {
+        setRoadmaps(prev => prev.map(r => {
+            if (r.id === roadmapId) {
+                return {
+                    ...r,
+                    step_status: { ...r.step_status, [stepId]: status }
+                };
+            }
+            return r;
+        }));
+
+        // Also update selectedRoadmap if it's the one being modified
+        if (selectedRoadmap?.id === roadmapId) {
+            setSelectedRoadmap(prev => prev ? {
+                ...prev,
+                step_status: { ...prev.step_status, [stepId]: status }
+            } : null);
+        }
+    };
+
+    const handlePositionsChange = (roadmapId: string, positions: NodePositions) => {
+        setRoadmaps(prev => prev.map(r => {
+            if (r.id === roadmapId) {
+                return {
+                    ...r,
+                    node_positions: positions
+                };
+            }
+            return r;
+        }));
+
+        if (selectedRoadmap?.id === roadmapId) {
+            setSelectedRoadmap(prev => prev ? {
+                ...prev,
+                node_positions: positions
+            } : null);
+        }
+    };
+
     if (loading) {
         return <div className="text-center py-8 opacity-60">Loading saved roadmaps...</div>;
     }
@@ -165,6 +189,11 @@ export default function SavedRoadmaps() {
                 company={selectedRoadmap?.company}
                 steps={selectedRoadmap?.steps || []}
                 createdAt={selectedRoadmap?.created_at}
+                roadmapId={selectedRoadmap?.id}
+                initialPositions={selectedRoadmap?.node_positions}
+                initialStatus={selectedRoadmap?.step_status}
+                onStatusChange={(stepId: string, status: StepStatus) => selectedRoadmap && handleStatusChange(selectedRoadmap.id, stepId, status)}
+                onPositionsChange={(positions: NodePositions) => selectedRoadmap && handlePositionsChange(selectedRoadmap.id, positions)}
             />
 
             <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -197,6 +226,32 @@ export default function SavedRoadmaps() {
                                         )}
                                     </div>
                                 </div>
+
+                                {/* Progress Indicator */}
+                                {roadmap.step_status && Object.keys(roadmap.step_status).length > 0 && (() => {
+                                    const total = roadmap.steps.length;
+                                    const completed = Object.values(roadmap.step_status).filter(s => s === 'completed').length;
+                                    const inProgress = Object.values(roadmap.step_status).filter(s => s === 'in-progress').length;
+                                    const percentage = Math.round((completed / total) * 100);
+                                    return (
+                                        <div className="mb-3">
+                                            <div className="flex items-center justify-between text-xs mb-1">
+                                                <span className="opacity-60">Progress</span>
+                                                <span className="font-bold text-emerald-500">{percentage}%</span>
+                                            </div>
+                                            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-500"
+                                                    style={{ width: `${percentage}%` }}
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-3 text-xs mt-1 opacity-60">
+                                                <span>{completed} completed</span>
+                                                {inProgress > 0 && <span>{inProgress} in progress</span>}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={(e) => {

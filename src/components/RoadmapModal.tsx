@@ -2,13 +2,8 @@
 
 import { X, Calendar, Building2, Clock, Map } from 'lucide-react';
 import { useEffect } from 'react';
-
-interface RoadmapStep {
-    title: string;
-    duration: string;
-    description: string;
-    detailedExplanation?: string;
-}
+import RoadmapGraphView from './RoadmapGraphView';
+import { RoadmapStep, NodePositions, StepStatusMap, StepStatus } from '@/types/roadmap';
 
 interface RoadmapModalProps {
     isOpen: boolean;
@@ -17,9 +12,26 @@ interface RoadmapModalProps {
     company?: string | null;
     steps: RoadmapStep[];
     createdAt?: string;
+    roadmapId?: string;
+    initialPositions?: NodePositions;
+    initialStatus?: StepStatusMap;
+    onStatusChange?: (stepId: string, status: StepStatus) => void;
+    onPositionsChange?: (positions: NodePositions) => void;
 }
 
-export default function RoadmapModal({ isOpen, onClose, title, company, steps, createdAt }: RoadmapModalProps) {
+export default function RoadmapModal({
+    isOpen,
+    onClose,
+    title,
+    company,
+    steps,
+    createdAt,
+    roadmapId,
+    initialPositions,
+    initialStatus,
+    onStatusChange,
+    onPositionsChange
+}: RoadmapModalProps) {
     // Prevent scrolling when modal is open
     useEffect(() => {
         if (isOpen) {
@@ -74,42 +86,17 @@ export default function RoadmapModal({ isOpen, onClose, title, company, steps, c
                 </div>
 
                 {/* Scrollable Body */}
-                <div className="overflow-y-auto p-6 space-y-8 custom-scrollbar">
-                    <div className="relative border-l-2 border-blue-500/30 ml-4 space-y-12 pb-4">
-                        {steps.map((step, index) => (
-                            <div key={index} className="relative pl-8 group">
-                                {/* Timeline Dot */}
-                                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)] ring-4 ring-black/5 dark:ring-white/5" />
-
-                                <div className="space-y-3">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                        <h3 className="text-xl font-bold group-hover:text-blue-500 transition-colors">
-                                            {step.title}
-                                        </h3>
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0 self-start sm:self-auto">
-                                            <Clock className="w-3.5 h-3.5" />
-                                            {step.duration}
-                                        </span>
-                                    </div>
-
-                                    <p className="opacity-80 leading-relaxed text-lg">
-                                        {step.description}
-                                    </p>
-
-                                    {step.detailedExplanation && (
-                                        <div className="bg-black/5 dark:bg-white/5 rounded-xl p-5 border border-black/5 dark:border-white/5 text-sm opacity-90 mt-4">
-                                            <h4 className="font-semibold text-blue-500 mb-2 flex items-center gap-2">
-                                                In-Depth Guide
-                                            </h4>
-                                            <p className="leading-relaxed">
-                                                {step.detailedExplanation}
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                {/* Content Body - Graph View */}
+                <div className="flex-1 overflow-hidden p-6 bg-black/20">
+                    <RoadmapGraphView
+                        steps={steps}
+                        roadmapId={roadmapId}
+                        initialPositions={initialPositions}
+                        initialStatus={initialStatus}
+                        onStatusChange={onStatusChange}
+                        onPositionsChange={onPositionsChange}
+                        className="h-full bg-transparent border-0"
+                    />
                 </div>
 
                 {/* Footer */}

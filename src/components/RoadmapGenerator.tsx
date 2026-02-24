@@ -7,17 +7,14 @@ import { User } from '@supabase/supabase-js';
 import RoadmapModal from './RoadmapModal';
 import RoadmapGraphView from './RoadmapGraphView';
 
-interface RoadmapStep {
-    title: string;
-    duration: string;
-    description: string;
-    detailedExplanation?: string;
-}
+import ProjectCard from './ProjectCard';
+import { RoadmapStep, CapstoneProject } from '@/types/roadmap';
 
 interface ValidationResponse {
     isValidRole: boolean;
     validationError?: string; // Reason for invalidity
     roadmap?: RoadmapStep[];
+    suggestedProject?: CapstoneProject;
 }
 
 interface RoadmapGeneratorProps {
@@ -30,13 +27,15 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
     const [hoursPerDay, setHoursPerDay] = useState<number>(2);
     const [skillLevel, setSkillLevel] = useState('Beginner');
     const [loading, setLoading] = useState(false);
-    const [roadmap, setRoadmap] = useState<RoadmapStep[] | null>(null);
+    const [roadmapData, setRoadmapData] = useState<ValidationResponse | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [savedRoadmapId, setSavedRoadmapId] = useState<string | null>(null);
     const [expandedStep, setExpandedStep] = useState<number | null>(null);
     const [validationError, setValidationError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedStep, setSelectedStep] = useState<RoadmapStep | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'graph'>('graph'); // Default to graph since it is cooler
 
 
@@ -118,8 +117,9 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
         }
 
         setLoading(true);
-        setRoadmap(null);
+        setRoadmapData(null);
         setSaved(false);
+        setSavedRoadmapId(null);
         setError(null);
         setValidationError(null);
 
@@ -148,7 +148,7 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
             if (!data.isValidRole) {
                 setValidationError(data.validationError || "Invalid job role or parameters. Please check your inputs.");
             } else if (data.roadmap) {
-                setRoadmap(data.roadmap);
+                setRoadmapData(data);
             } else {
                 setError("Failed to parse roadmap data.");
             }
@@ -180,17 +180,36 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
             return;
         }
 
-        if (!roadmap) return;
+        if (!roadmapData?.roadmap) return;
         setSaving(true);
         try {
-            await supabase.from('roadmaps').insert({
-                user_id: user.id,
-                job_role: jobRole,
-                company: company || null,
-                skill_level: skillLevel,
-                steps: roadmap
-            });
+            // Add IDs to steps if not present
+            const stepsWithIds = roadmapData.roadmap.map((step, index) => ({
+                ...step,
+                id: `step-${index}`
+            }));
+
+            const { data, error: insertError } = await supabase
+                .from('roadmaps')
+                .insert({
+                    user_id: user.id,
+                    job_role: jobRole,
+                    company: company || null,
+                    skill_level: skillLevel,
+                    steps: stepsWithIds,
+                    // Initialize empty tracking data
+                    node_positions: {},
+                    step_status: {}
+                })
+                .select('id')
+                .single();
+
+            if (insertError) throw insertError;
+
             setSaved(true);
+            setSavedRoadmapId(data?.id || null);
+            // Update roadmap with IDs
+            setRoadmapData({ ...roadmapData, roadmap: stepsWithIds });
             if (onSaved) onSaved();
         } catch (error: any) {
             console.error("Error saving roadmap:", error);
@@ -241,10 +260,13 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
 
             <RoadmapModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title={jobRole}
-                company={company}
-                steps={roadmap || []}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setSelectedStep(null);
+                }}
+                title={selectedStep ? selectedStep.title : jobRole}
+                company={selectedStep ? undefined : company}
+                steps={selectedStep ? [selectedStep] : (roadmapData?.roadmap || [])}
             />
 
             <div className="glass-panel rounded-xl p-8 mb-8 text-current">
@@ -359,7 +381,7 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
                 </form>
             </div>
 
-            {roadmap && (
+            {roadmapData?.roadmap && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex items-center justify-between pb-2">
                         <h3 className="text-xl font-bold flex items-center gap-2">
@@ -414,17 +436,21 @@ export default function RoadmapGenerator({ onSaved }: RoadmapGeneratorProps) {
                     {viewMode === 'graph' ? (
                         <div className="animate-in fade-in zoom-in-95 duration-500">
                             <RoadmapGraphView
-                                steps={roadmap}
-                                onNodeClick={(step) => {
-                                    // Find index locally if needed or just use step data
-                                    alert(`Step: ${step.title}\n${step.description}`);
-                                }}
+                                steps={roadmapData.roadmap}
+                                roadmapId={savedRoadmapId || undefined}
                             />
-                            <p className="text-center text-xs opacity-50 mt-2">Click nodes for details. Switch to List View for full content.</p>
+                            {roadmapData.suggestedProject && (
+                                <ProjectCard project={roadmapData.suggestedProject} />
+                            )}
+                            <p className="text-center text-xs opacity-50 mt-2">
+                                {savedRoadmapId
+                                    ? 'Click status icons to track progress. Drag nodes to customize layout.'
+                                    : 'Save the roadmap to enable progress tracking and layout persistence.'}
+                            </p>
                         </div>
                     ) : (
                         <div className="relative border-l-2 border-blue-500/30 ml-4 space-y-8 pb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            {roadmap.map((step, index) => (
+                            {roadmapData.roadmap.map((step, index) => (
                                 <div key={index} className="relative pl-8">
                                     <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
 
