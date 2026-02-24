@@ -54,3 +54,8 @@ next-env.d.ts
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# python
+__pycache__/
+*.pyc
+.venv/
